@@ -1,4 +1,5 @@
 import pygame
+import os
 
 
 class Board:
@@ -14,6 +15,9 @@ class Board:
         self.top = 10
         self.cell_size = 30
         self.colors = []
+        self.mouse2_pos = (self.width // 2, 0)
+        self.mouse1_pos = (self.width // 2, self.height - 1)
+        self.turn = 1
         for i in range(self.height):
             row = []
             for j in range(self.width):
@@ -65,6 +69,32 @@ class Board:
                 if self.vert_fence[i][j]:
                     pygame.draw.rect(surface, (255, 0, 0), pygame.Rect(self.vert[j + 1] - 1, self.hor[i],
                                                                        2, self.cell_size))
+        pygame.draw.rect(screen, (255, 255, 255), pygame.Rect(width - 0.5 * (width - 0.9 * height), 0.2 * height,
+                                                              0.35 * (width - 0.9 * height), 0.1 * height), 7)
+        pygame.draw.rect(screen, (255, 255, 255), pygame.Rect(width - 0.5 * (width - 0.9 * height), 0.4 * height,
+                                                              0.35 * (width - 0.9 * height), 0.1 * height), 7)
+        pygame.draw.rect(screen, (255, 255, 255), pygame.Rect(width - 0.5 * (width - 0.9 * height), 0.7 * height,
+                                                              0.35 * (width - 0.9 * height), 0.1 * height), 7)
+        f1 = pygame.font.Font(None, 36)
+        text1 = f1.render('Поставить забор', True,
+                          (0, 255, 0))
+        screen.blit(text1, (width - 0.5 * (width - 0.9 * height) + 0.1 * 0.35 * (width - 0.9 * height), 0.24 * height))
+        f2 = pygame.font.Font(None, 36)
+        text1 = f2.render('Ходить', True,
+                          (0, 255, 0))
+        screen.blit(text1, (width - 0.5 * (width - 0.9 * height) + 0.1 * 0.35 * (width - 0.9 * height), 0.44 * height))
+        f3 = pygame.font.Font(None, 36)
+        text1 = f3.render('Сдаться', True,
+                          (255, 255, 0))
+        screen.blit(text1, (width - 0.5 * (width - 0.9 * height) + 0.1 * 0.35 * (width - 0.9 * height), 0.74 * height))
+
+        mouse1 = load_image("trans_mouse1.png")
+        mouse1 = pygame.transform.scale(mouse1, (cell_size, cell_size))
+        screen.blit(mouse1, (self.vert[self.mouse1_pos[0]], self.hor[self.mouse1_pos[1]]))
+
+        mouse2 = load_image("trans_mouse2.png")
+        mouse2 = pygame.transform.scale(mouse2, (cell_size, cell_size))
+        screen.blit(mouse2, (self.vert[self.mouse2_pos[0]], self.hor[self.mouse2_pos[1]]))
 
     def get_cell(self, pos):
         x_pos, y_pos = int(pos[0]), int(pos[1])
@@ -102,27 +132,67 @@ class Board:
 def put_fence(board, coords1, coords2):
     if abs(coords1[0] - coords2[0]) == 1:
         a = max(coords1[0], coords2[0])
+        if board.vert_fence[coords1[1]][a - 1] == 1:
+            return "cancelled"
         board.vert_fence[coords1[1]][a - 1] = 1
     elif abs(coords1[1] - coords2[1]) == 1:
         b = min(coords1[1], coords2[1])
+        if board.hor_fence[b][coords1[0]] == 1:
+            return "cancelled"
         board.hor_fence[b][coords1[0]] = 1
     print(board.hor_fence)
     print(board.vert_fence)
+    return "ok"
+
+def move(board, coords1, coords2):
+    if board.mouse1_pos == coords1:
+        if coords2 == board.mouse2_pos:
+            return "cancelled"
+        if coords1[0] == coords2[0]:
+            if board.hor_fence[min(coords1[1], coords2[1])][coords1[0]]:
+                return "cancelled"
+        elif coords1[1] == coords2[1]:
+            if board.vert_fence[coords1[1]][min(coords1[0], coords2[0])]:
+                return "cancelled"
+        board.mouse1_pos = coords2
+    elif board.mouse2_pos == coords1:
+        if coords2 == board.mouse1_pos:
+            return "cancelled"
+        if coords1[0] == coords2[0]:
+            if board.hor_fence[min(coords1[1], coords2[1])][coords1[0]]:
+                return "cancelled"
+        elif coords1[1] == coords2[1]:
+            if board.vert_fence[coords1[1]][min(coords1[0], coords2[0])]:
+                return "cancelled"
+        board.mouse2_pos = coords2
+    return "ok"
+
+def load_image(name):
+    fullname = os.path.join('data', name)
+    image = pygame.image.load(fullname)
+    image = image.convert_alpha()
+    return image
 
 
 if __name__ == '__main__':
     N = 7
     coords1, coords2 = None, None
+    i_put_fence = False
+    i_give_up = False
+    i_move = False
 
     pygame.init()
+    pygame.font.init()
     pygame.display.set_caption('Коридор')
     infoObject = pygame.display.Info()
     width, height = infoObject.current_w, infoObject.current_h - 10
+    print(width, height)
     screen = pygame.display.set_mode((width, height))
     pygame.display.update()
 
     board = Board(N, N)
     cell_size = int(0.9 * height / N)
+    board.set_view(0.35 * (width - 0.9 * height), 0.05 * height, cell_size)
 
     running = True
     while running:
@@ -130,22 +200,27 @@ if __name__ == '__main__':
             if event.type == pygame.QUIT:
                 running = False
             if event.type == pygame.MOUSEBUTTONDOWN:
-                if not coords1:
-                    board.get_click(event.pos)
-                    coords1 = board.get_cell(event.pos)
-                else:
-                    board.back_to_black()
-                    coords2 = board.get_cell(event.pos)
-                    if abs(coords1[0] - coords2[0]) + abs(coords1[1] - coords2[1]) == 1:
-                        put_fence(board, coords1, coords2)
-                        coords1, coords2 = None, None
+                coords1_clicked = board.get_cell(event.pos)
+            elif event.type == pygame.MOUSEBUTTONUP:
+                coords2_clicked = board.get_cell(event.pos)
+                if coords1_clicked == coords2_clicked:
+                    # скорее всего двигаем мышь,
+                    # но это неточно, поэтому перепроверим
+                    if coords1:
+                         if coords1 == coords1_clicked:
+                            coords1 = None
+                            # точно ставим
+                            if abs(board.mouse1_pos[0] - coords1_clicked[0]) + abs(board.mouse1_pos[1] - coords1_clicked[1]) == 1:
+                                move(board, board.mouse1_pos, coords1_clicked)
+                            elif abs(board.mouse2_pos[0] - coords1_clicked[0]) + abs(board.mouse2_pos[1] - coords1_clicked[1]) == 1:
+                                move(board, board.mouse2_pos, coords1_clicked)
                     else:
-                        board.get_click(event.pos)
-                        coords1 = coords2
-                        coords2 = None
+                        coords1 = coords1_clicked
+                elif abs(coords1_clicked[0] - coords2_clicked[0]) + abs(coords1_clicked[1] - coords2_clicked[1]) == 1:
+                    # точно ставим забор
+                    put_fence(board, coords1_clicked, coords2_clicked)
                 print(coords1, coords2)
         screen.fill((0, 0, 0))
-        board.set_view(0.5 * (width - 0.9 * height), 0.05 * height, cell_size)
         board.render(screen)
         pygame.display.flip()
     pygame.quit()
