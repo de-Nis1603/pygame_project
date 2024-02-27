@@ -129,7 +129,9 @@ class Board:
             self.colors.append(row)
 
 
-def put_fence(board, coords1, coords2):
+def put_fence(board, coords1, coords2, count):
+    if count < 1:
+        return
     if abs(coords1[0] - coords2[0]) == 1:
         a = max(coords1[0], coords2[0])
         if board.vert_fence[coords1[1]][a - 1] == 1:
@@ -173,13 +175,18 @@ def load_image(name):
     image = image.convert_alpha()
     return image
 
+def change_turn(turn):
+    if turn == 1:
+        return 2
+    return 1
+
 
 if __name__ == '__main__':
     N = 7
-    coords1, coords2 = None, None
-    i_put_fence = False
-    i_give_up = False
-    i_move = False
+    fence_count1 = N + 1
+    fence_count2 = N + 1
+    coords1 = None
+    it_is_turn_for_player = 1
 
     pygame.init()
     pygame.font.init()
@@ -203,23 +210,50 @@ if __name__ == '__main__':
                 coords1_clicked = board.get_cell(event.pos)
             elif event.type == pygame.MOUSEBUTTONUP:
                 coords2_clicked = board.get_cell(event.pos)
-                if coords1_clicked == coords2_clicked:
+                if coords1_clicked == coords2_clicked and coords1_clicked:
                     # скорее всего двигаем мышь,
                     # но это неточно, поэтому перепроверим
                     if coords1:
                          if coords1 == coords1_clicked:
                             coords1 = None
-                            # точно ставим
-                            if abs(board.mouse1_pos[0] - coords1_clicked[0]) + abs(board.mouse1_pos[1] - coords1_clicked[1]) == 1:
-                                move(board, board.mouse1_pos, coords1_clicked)
-                            elif abs(board.mouse2_pos[0] - coords1_clicked[0]) + abs(board.mouse2_pos[1] - coords1_clicked[1]) == 1:
-                                move(board, board.mouse2_pos, coords1_clicked)
+                            # точно ходим мышкой
+                            if abs(board.mouse1_pos[0] - coords1_clicked[0]) + abs(board.mouse1_pos[1] - coords1_clicked[1]) == 1 and it_is_turn_for_player == 1:
+                                verdict = move(board, board.mouse1_pos, coords1_clicked)
+                                if verdict == "ok":
+                                    it_is_turn_for_player = change_turn(it_is_turn_for_player)
+                                    print(it_is_turn_for_player)
+                            elif abs(board.mouse2_pos[0] - coords1_clicked[0]) + abs(board.mouse2_pos[1] - coords1_clicked[1]) == 1 and it_is_turn_for_player == 2:
+                                verdict = move(board, board.mouse2_pos, coords1_clicked)
+                                if verdict == "ok":
+                                    it_is_turn_for_player = change_turn(it_is_turn_for_player)
+                                    print(it_is_turn_for_player)
+                            else:
+                                coords1 = None
+                                coords1_clicked = None
+                                coords2_clicked = None
+                         else:
+                             coords1 = coords1_clicked
+                             coords1_clicked = None
+                             coords2_clicked = None
                     else:
                         coords1 = coords1_clicked
-                elif abs(coords1_clicked[0] - coords2_clicked[0]) + abs(coords1_clicked[1] - coords2_clicked[1]) == 1:
+                elif coords1_clicked and abs(coords1_clicked[0] - coords2_clicked[0]) + abs(coords1_clicked[1] - coords2_clicked[1]) == 1:
                     # точно ставим забор
-                    put_fence(board, coords1_clicked, coords2_clicked)
-                print(coords1, coords2)
+                    if it_is_turn_for_player == 1:
+                        verdict = put_fence(board, coords1_clicked, coords2_clicked, fence_count1)
+                    elif it_is_turn_for_player == 2:
+                        verdict = put_fence(board, coords1_clicked, coords2_clicked, fence_count2)
+                    if verdict == "ok":
+                        if it_is_turn_for_player == 1:
+                            fence_count1 -= 1
+                        elif it_is_turn_for_player == 2:
+                            fence_count2 -= 1
+                        it_is_turn_for_player = change_turn(it_is_turn_for_player)
+                        print(it_is_turn_for_player)
+                else:
+                    coords1 = None
+                    coords1_clicked = None
+                    coords2_clicked = None
         screen.fill((0, 0, 0))
         board.render(screen)
         pygame.display.flip()
