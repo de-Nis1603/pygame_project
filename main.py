@@ -214,26 +214,27 @@ def we_can_put_fence(board, coords1, coords2):
         return True
     return False
 
+def check_move(board, coords1, coords2):
+    if coords1[0] == coords2[0]:
+        if board.hor_fence[min(coords1[1], coords2[1])][coords1[0]]:
+            return "cancelled"
+    elif coords1[1] == coords2[1]:
+        if board.vert_fence[coords1[1]][min(coords1[0], coords2[0])]:
+            return "cancelled"
+    return "ok"
+
 def move(board, coords1, coords2):
     if board.mouse1_pos == coords1:
         if coords2 == board.mouse2_pos:
             return "cancelled"
-        if coords1[0] == coords2[0]:
-            if board.hor_fence[min(coords1[1], coords2[1])][coords1[0]]:
-                return "cancelled"
-        elif coords1[1] == coords2[1]:
-            if board.vert_fence[coords1[1]][min(coords1[0], coords2[0])]:
-                return "cancelled"
+        if check_move(board, coords1, coords2) == "cancelled":
+            return "cancelled"
         board.mouse1_pos = coords2
     elif board.mouse2_pos == coords1:
         if coords2 == board.mouse1_pos:
             return "cancelled"
-        if coords1[0] == coords2[0]:
-            if board.hor_fence[min(coords1[1], coords2[1])][coords1[0]]:
-                return "cancelled"
-        elif coords1[1] == coords2[1]:
-            if board.vert_fence[coords1[1]][min(coords1[0], coords2[0])]:
-                return "cancelled"
+        if check_move(board, coords1, coords2) == "cancelled":
+            return "cancelled"
         board.mouse2_pos = coords2
     return "ok"
 
@@ -295,6 +296,16 @@ if __name__ == '__main__':
                                     it_is_turn_for_player = change_turn(it_is_turn_for_player)
                                     print(it_is_turn_for_player)
                             elif abs(board.mouse2_pos[0] - coords1_clicked[0]) + abs(board.mouse2_pos[1] - coords1_clicked[1]) == 1 and it_is_turn_for_player == 2:
+                                verdict = move(board, board.mouse2_pos, coords1_clicked)
+                                if verdict == "ok":
+                                    it_is_turn_for_player = change_turn(it_is_turn_for_player)
+                                    print(it_is_turn_for_player)
+                            elif abs(board.mouse2_pos[0] - coords1_clicked[0]) + abs(board.mouse2_pos[1] - coords1_clicked[1]) == 1 and abs(board.mouse2_pos[0] - board.mouse1_pos[0]) + abs(board.mouse2_pos[1] - board.mouse1_pos[1]) == 1 and board.mouse1_pos != coords1_clicked and it_is_turn_for_player == 1 and check_move(board, board.mouse1_pos, board.mouse2_pos) == "ok" and check_move(board, board.mouse2_pos, coords1_clicked) == "ok":
+                                verdict = move(board, board.mouse1_pos, coords1_clicked)
+                                if verdict == "ok":
+                                    it_is_turn_for_player = change_turn(it_is_turn_for_player)
+                                    print(it_is_turn_for_player)
+                            elif abs(board.mouse1_pos[0] - coords1_clicked[0]) + abs(board.mouse1_pos[1] - coords1_clicked[1]) == 1 and abs(board.mouse1_pos[0] - board.mouse2_pos[0]) + abs(board.mouse1_pos[1] - board.mouse2_pos[1]) == 1 and board.mouse2_pos != coords1_clicked and it_is_turn_for_player == 2 and check_move(board, board.mouse2_pos, board.mouse1_pos) == "ok" and check_move(board, board.mouse1_pos, coords1_clicked) == "ok":
                                 verdict = move(board, board.mouse2_pos, coords1_clicked)
                                 if verdict == "ok":
                                     it_is_turn_for_player = change_turn(it_is_turn_for_player)
