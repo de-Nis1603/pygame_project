@@ -18,6 +18,8 @@ class Board:
         self.colors = []
         self.mouse2_pos = (self.width // 2, 0)
         self.mouse1_pos = (self.width // 2, self.height - 1)
+        self.fence_count_1 = self.height + 1
+        self.fence_count_2 = self.height + 1
         self.turn = 1
         for i in range(self.height):
             row = []
@@ -72,10 +74,22 @@ class Board:
                                                                        2, self.cell_size))
         pygame.draw.rect(screen, (255, 255, 255), pygame.Rect(width - 0.5 * (width - 0.9 * height), 0.45 * height,
                                                               0.35 * (width - 0.9 * height), 0.1 * height), 7)
+        pygame.draw.rect(screen, (255, 255, 255), pygame.Rect(width - 0.5 * (width - 0.9 * height), 0.15 * height,
+                                                              0.1 * (width - 0.9 * height), 0.1 * height), 2)
+        pygame.draw.rect(screen, (255, 255, 255), pygame.Rect(width - 0.5 * (width - 0.9 * height), 0.75 * height,
+                                                              0.1 * (width - 0.9 * height), 0.1 * height), 2)
+        f1 = pygame.font.Font(None, 40)
+        text1 = f1.render(str(self.fence_count_1), True,
+                          (0, 255, 0))
+        f2 = pygame.font.Font(None, 40)
+        text2 = f2.render(str(self.fence_count_2), True,
+                          (0, 255, 0))
         f3 = pygame.font.Font(None, 36)
-        text1 = f3.render('Сдаться', True,
+        text3 = f3.render('Сдаться', True,
                           (255, 255, 0))
-        screen.blit(text1, (width - 0.5 * (width - 0.9 * height) + 0.1 * 0.35 * (width - 0.9 * height), 0.5 * height))
+        screen.blit(text2, (width - 0.5 * (width - 0.9 * height) + 0.1 * 0.35 * (width - 0.9 * height), 0.19 * height))
+        screen.blit(text1, (width - 0.5 * (width - 0.9 * height) + 0.1 * 0.35 * (width - 0.9 * height), 0.79 * height))
+        screen.blit(text3, (width - 0.5 * (width - 0.9 * height) + 0.1 * 0.35 * (width - 0.9 * height), 0.5 * height))
 
         mouse1 = load_image("trans_mouse1.png")
         mouse1 = pygame.transform.scale(mouse1, (cell_size, cell_size))
@@ -237,8 +251,8 @@ def change_turn(turn):
 
 if __name__ == '__main__':
     N = 3
-    fence_count1 = N + 1
-    fence_count2 = N + 1
+    fence_count_1 = N + 1
+    fence_count_2 = N + 1
     coords1 = None
     it_is_turn_for_player = 1
 
@@ -298,14 +312,16 @@ if __name__ == '__main__':
                 elif coords1_clicked and abs(coords1_clicked[0] - coords2_clicked[0]) + abs(coords1_clicked[1] - coords2_clicked[1]) == 1:
                     # точно ставим забор
                     if it_is_turn_for_player == 1:
-                        verdict = put_fence(board, coords1_clicked, coords2_clicked, fence_count1)
+                        verdict = put_fence(board, coords1_clicked, coords2_clicked, fence_count_1)
                     elif it_is_turn_for_player == 2:
-                        verdict = put_fence(board, coords1_clicked, coords2_clicked, fence_count2)
+                        verdict = put_fence(board, coords1_clicked, coords2_clicked, fence_count_2)
                     if verdict == "ok":
                         if it_is_turn_for_player == 1:
-                            fence_count1 -= 1
+                            board.fence_count_1 -= 1
+                            fence_count_1 -= 1
                         elif it_is_turn_for_player == 2:
-                            fence_count2 -= 1
+                            board.fence_count_2 -= 1
+                            fence_count_2 -= 1
                         it_is_turn_for_player = change_turn(it_is_turn_for_player)
                         print(it_is_turn_for_player)
                     else:
