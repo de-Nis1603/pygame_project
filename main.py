@@ -1,5 +1,6 @@
 import pygame
 import os
+import copy
 
 
 class Board:
@@ -69,24 +70,12 @@ class Board:
                 if self.vert_fence[i][j]:
                     pygame.draw.rect(surface, (255, 0, 0), pygame.Rect(self.vert[j + 1] - 1, self.hor[i],
                                                                        2, self.cell_size))
-        pygame.draw.rect(screen, (255, 255, 255), pygame.Rect(width - 0.5 * (width - 0.9 * height), 0.2 * height,
+        pygame.draw.rect(screen, (255, 255, 255), pygame.Rect(width - 0.5 * (width - 0.9 * height), 0.45 * height,
                                                               0.35 * (width - 0.9 * height), 0.1 * height), 7)
-        pygame.draw.rect(screen, (255, 255, 255), pygame.Rect(width - 0.5 * (width - 0.9 * height), 0.4 * height,
-                                                              0.35 * (width - 0.9 * height), 0.1 * height), 7)
-        pygame.draw.rect(screen, (255, 255, 255), pygame.Rect(width - 0.5 * (width - 0.9 * height), 0.7 * height,
-                                                              0.35 * (width - 0.9 * height), 0.1 * height), 7)
-        f1 = pygame.font.Font(None, 36)
-        text1 = f1.render('Поставить забор', True,
-                          (0, 255, 0))
-        screen.blit(text1, (width - 0.5 * (width - 0.9 * height) + 0.1 * 0.35 * (width - 0.9 * height), 0.24 * height))
-        f2 = pygame.font.Font(None, 36)
-        text1 = f2.render('Ходить', True,
-                          (0, 255, 0))
-        screen.blit(text1, (width - 0.5 * (width - 0.9 * height) + 0.1 * 0.35 * (width - 0.9 * height), 0.44 * height))
         f3 = pygame.font.Font(None, 36)
         text1 = f3.render('Сдаться', True,
                           (255, 255, 0))
-        screen.blit(text1, (width - 0.5 * (width - 0.9 * height) + 0.1 * 0.35 * (width - 0.9 * height), 0.74 * height))
+        screen.blit(text1, (width - 0.5 * (width - 0.9 * height) + 0.1 * 0.35 * (width - 0.9 * height), 0.5 * height))
 
         mouse1 = load_image("trans_mouse1.png")
         mouse1 = pygame.transform.scale(mouse1, (cell_size, cell_size))
@@ -132,6 +121,9 @@ class Board:
 def put_fence(board, coords1, coords2, count):
     if count < 1:
         return
+    if not we_can_put_fence(board, coords1, coords2):
+        return "cancelled"
+    print("allowed")
     if abs(coords1[0] - coords2[0]) == 1:
         a = max(coords1[0], coords2[0])
         if board.vert_fence[coords1[1]][a - 1] == 1:
@@ -142,9 +134,71 @@ def put_fence(board, coords1, coords2, count):
         if board.hor_fence[b][coords1[0]] == 1:
             return "cancelled"
         board.hor_fence[b][coords1[0]] = 1
-    print(board.hor_fence)
-    print(board.vert_fence)
     return "ok"
+
+def we_can_put_fence(board, coords1, coords2):
+    shadow_vert = copy.deepcopy(board.vert_fence)
+    shadow_hor = copy.deepcopy(board.hor_fence)
+    if abs(coords1[0] - coords2[0]) == 1:
+        a = max(coords1[0], coords2[0])
+        shadow_vert[coords1[1]][a - 1] = 1
+    elif abs(coords1[1] - coords2[1]) == 1:
+        b = min(coords1[1], coords2[1])
+        shadow_hor[b][coords1[0]] = 1
+    can_go_to_1 = []
+    can_go_to_1.append(board.mouse1_pos)
+    added_in_cycle = 1
+    accessible_1 = False
+    while added_in_cycle > 0:
+        to_add = set()
+        for i in range(len(can_go_to_1) - added_in_cycle, len(can_go_to_1)):
+            cell = can_go_to_1[i]
+            if cell[1] > 0 and shadow_hor[cell[1] - 1][cell[0]] == 0:
+                to_add.add((cell[0], cell[1] - 1))
+            if cell[1] < N - 1 and shadow_hor[cell[1]][cell[0]] == 0:
+                to_add.add((cell[0], cell[1] + 1))
+            if cell[0] > 0 and shadow_vert[cell[1]][cell[0] - 1] == 0:
+                to_add.add((cell[0] - 1, cell[1]))
+            if cell[0] < N - 1 and shadow_vert[cell[1]][cell[0]] == 0:
+                to_add.add((cell[0] + 1, cell[1]))
+        added_in_cycle = 0
+        for elem in to_add:
+            if elem[1] == 0:
+                accessible_1 = True
+                added_in_cycle = 0
+                break
+            if elem not in can_go_to_1:
+                can_go_to_1.append(elem)
+                added_in_cycle += 1
+
+    can_go_to_2 = []
+    can_go_to_2.append(board.mouse2_pos)
+    added_in_cycle = 1
+    accessible_2 = False
+    while added_in_cycle > 0:
+        to_add = set()
+        for i in range(len(can_go_to_2) - added_in_cycle, len(can_go_to_2)):
+            cell = can_go_to_2[i]
+            if cell[1] > 0 and shadow_hor[cell[1] - 1][cell[0]] == 0:
+                to_add.add((cell[0], cell[1] - 1))
+            if cell[1] < N - 1 and shadow_hor[cell[1]][cell[0]] == 0:
+                to_add.add((cell[0], cell[1] + 1))
+            if cell[0] > 0 and shadow_vert[cell[1]][cell[0] - 1] == 0:
+                to_add.add((cell[0] - 1, cell[1]))
+            if cell[0] < N - 1 and shadow_vert[cell[1]][cell[0]] == 0:
+                to_add.add((cell[0] + 1, cell[1]))
+        added_in_cycle = 0
+        for elem in to_add:
+            if elem[1] == N - 1:
+                accessible_2 = True
+                added_in_cycle = 0
+                break
+            if elem not in can_go_to_2:
+                can_go_to_2.append(elem)
+                added_in_cycle += 1
+    if accessible_1 and accessible_2:
+        return True
+    return False
 
 def move(board, coords1, coords2):
     if board.mouse1_pos == coords1:
@@ -182,7 +236,7 @@ def change_turn(turn):
 
 
 if __name__ == '__main__':
-    N = 7
+    N = 3
     fence_count1 = N + 1
     fence_count2 = N + 1
     coords1 = None
@@ -208,8 +262,12 @@ if __name__ == '__main__':
                 running = False
             if event.type == pygame.MOUSEBUTTONDOWN:
                 coords1_clicked = board.get_cell(event.pos)
+                c1 = event.pos
             elif event.type == pygame.MOUSEBUTTONUP:
                 coords2_clicked = board.get_cell(event.pos)
+                c2 = event.pos
+                if width - 0.5 * (width - 0.9 * height) <= c2[0] <= width - 0.15 * (width - 0.9 * height) and width - 0.5 * (width - 0.9 * height) <= c1[0] <= width - 0.15 * (width - 0.9 * height) and 0.45 * height <= c1[1] <= 0.55 * height and 0.45 * height <= c2[1] <= 0.55 * height:
+                    print("giving up")
                 if coords1_clicked == coords2_clicked and coords1_clicked:
                     # скорее всего двигаем мышь,
                     # но это неточно, поэтому перепроверим
@@ -250,6 +308,10 @@ if __name__ == '__main__':
                             fence_count2 -= 1
                         it_is_turn_for_player = change_turn(it_is_turn_for_player)
                         print(it_is_turn_for_player)
+                    else:
+                        coords1 = None
+                        coords1_clicked = None
+                        coords2_clicked = None
                 else:
                     coords1 = None
                     coords1_clicked = None
