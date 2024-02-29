@@ -1,6 +1,7 @@
 import pygame
 import os
 import copy
+import time
 
 
 class Board:
@@ -271,6 +272,17 @@ if __name__ == '__main__':
     board.set_view(0.35 * (width - 0.9 * height), 0.05 * height, cell_size)
 
     running = True
+    name = load_image("name.png")
+    name = pygame.transform.scale(name, (width - 10, height - 10))
+    screen.blit(name, (10, 10))
+    pygame.display.flip()
+    time.sleep(1)
+    f = pygame.font.Font(None, width // 7)
+    text = f.render('PRESENTS', True,
+                      (255, 255, 0))
+    screen.blit(text, (width * 0.25, height * 0.67))
+    pygame.display.flip()
+    time.sleep(2)
     while running:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
