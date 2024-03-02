@@ -2,6 +2,7 @@ import pygame
 import os
 import copy
 import time
+import sqlite3
 
 
 class Board:
@@ -19,6 +20,7 @@ class Board:
         self.colors = []
         self.mouse2_pos = (self.width // 2, 0)
         self.mouse1_pos = (self.width // 2, self.height - 1)
+        self.active_turn = self.mouse1_pos
         self.fence_count_1 = self.height + 1
         self.fence_count_2 = self.height + 1
         self.turn = 1
@@ -79,6 +81,8 @@ class Board:
                                                               0.1 * (width - 0.9 * height), 0.1 * height), 2)
         pygame.draw.rect(screen, (255, 255, 255), pygame.Rect(width - 0.5 * (width - 0.9 * height), 0.75 * height,
                                                               0.1 * (width - 0.9 * height), 0.1 * height), 2)
+        pygame.draw.rect(screen, (63, 150, 140), pygame.Rect(self.vert[self.active_turn[0]] + 1, self.hor[self.active_turn[1]] + 1,
+                                                             self.cell_size - 2, self.cell_size - 2))
         f1 = pygame.font.Font(None, 40)
         text1 = f1.render(str(self.fence_count_1), True,
                           (0, 255, 0))
@@ -245,13 +249,63 @@ def load_image(name):
     image = image.convert_alpha()
     return image
 
-def change_turn(turn):
+def change_turn(turn, board):
+    global turns
+    turns += 1
     if turn == 1:
+        board.active_turn = board.mouse2_pos
         return 2
+    board.active_turn = board.mouse1_pos
     return 1
+
+def check_win(board):
+    if board.mouse1_pos[1] == 0:
+        give_victory(1)
+    elif board.mouse2_pos[1] == N - 1:
+        give_victory(2)
+
+def give_victory(player):
+    print("winner" + str(player))
+    screen.fill((0, 0, 0))
+    f = pygame.font.Font(None, width // 13)
+    text = f.render(f'Победил игрок {player}!', True,
+                    (255, 255, 255))
+    screen.blit(text, (width * 0.25, height * 0.67))
+    king = load_image(f"king_mouse{player}.png")
+    king = pygame.transform.scale(king, (width // 3, height // 2))
+    screen.blit(king, (width // 3, 10))
+    pygame.display.flip()
+    writer(player)
+    time.sleep(10)
+
+def writer(player):
+    print('writer in action')
+    connection = sqlite3.connect("random_stats.sqlite")
+    cur = connection.cursor()
+    g_p = cur.execute("""SELECT games_played FROM types""").fetchone()[0]
+    f_p = cur.execute('''SELECT fences_put FROM types''').fetchone()[0]
+    t_m = cur.execute('''SELECT turns_made FROM types''').fetchone()[0]
+    o_w = cur.execute('''SELECT one_wins FROM types''').fetchone()[0]
+    t_w = cur.execute('''SELECT two_wins FROM types''').fetchone()[0]
+    cur.execute(f'''UPDATE types
+                    SET games_played = {g_p + 1}''')
+    cur.execute(f'''UPDATE types
+                    SET fences_put = {f_p + 2 * N + 2 - fence_count_1 - fence_count_2}''')
+    cur.execute(f'''UPDATE types
+                    SET turns_made = {t_m + turns}''')
+    cur.execute(f'''UPDATE types
+                    SET average_turns = {round((turns + t_m) / (g_p + 1), 3)}''')
+    if player == 1:
+        cur.execute(f'''UPDATE types
+                        SET one_wins = {o_w + 1}''')
+    else:
+        cur.execute(f'''UPDATE types
+                        SET two_wins = {t_w + 1}''')
+    connection.commit()
 
 
 if __name__ == '__main__':
+    turns = 0
     N = 3
     fence_count_1 = N + 1
     fence_count_2 = N + 1
@@ -272,17 +326,6 @@ if __name__ == '__main__':
     board.set_view(0.35 * (width - 0.9 * height), 0.05 * height, cell_size)
 
     running = True
-    name = load_image("name.png")
-    name = pygame.transform.scale(name, (width - 10, height - 10))
-    screen.blit(name, (10, 10))
-    pygame.display.flip()
-    time.sleep(1)
-    f = pygame.font.Font(None, width // 7)
-    text = f.render('PRESENTS', True,
-                      (255, 255, 0))
-    screen.blit(text, (width * 0.25, height * 0.67))
-    pygame.display.flip()
-    time.sleep(2)
     while running:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -295,6 +338,10 @@ if __name__ == '__main__':
                 c2 = event.pos
                 if width - 0.5 * (width - 0.9 * height) <= c2[0] <= width - 0.15 * (width - 0.9 * height) and width - 0.5 * (width - 0.9 * height) <= c1[0] <= width - 0.15 * (width - 0.9 * height) and 0.45 * height <= c1[1] <= 0.55 * height and 0.45 * height <= c2[1] <= 0.55 * height:
                     print("giving up")
+                    if it_is_turn_for_player == 1:
+                        give_victory(2)
+                    else:
+                        give_victory(1)
                 if coords1_clicked == coords2_clicked and coords1_clicked:
                     # скорее всего двигаем мышь,
                     # но это неточно, поэтому перепроверим
@@ -305,23 +352,25 @@ if __name__ == '__main__':
                             if abs(board.mouse1_pos[0] - coords1_clicked[0]) + abs(board.mouse1_pos[1] - coords1_clicked[1]) == 1 and it_is_turn_for_player == 1:
                                 verdict = move(board, board.mouse1_pos, coords1_clicked)
                                 if verdict == "ok":
-                                    it_is_turn_for_player = change_turn(it_is_turn_for_player)
+                                    it_is_turn_for_player = change_turn(it_is_turn_for_player, board)
                                     print(it_is_turn_for_player)
                             elif abs(board.mouse2_pos[0] - coords1_clicked[0]) + abs(board.mouse2_pos[1] - coords1_clicked[1]) == 1 and it_is_turn_for_player == 2:
                                 verdict = move(board, board.mouse2_pos, coords1_clicked)
                                 if verdict == "ok":
-                                    it_is_turn_for_player = change_turn(it_is_turn_for_player)
+                                    it_is_turn_for_player = change_turn(it_is_turn_for_player, board)
                                     print(it_is_turn_for_player)
                             elif abs(board.mouse2_pos[0] - coords1_clicked[0]) + abs(board.mouse2_pos[1] - coords1_clicked[1]) == 1 and abs(board.mouse2_pos[0] - board.mouse1_pos[0]) + abs(board.mouse2_pos[1] - board.mouse1_pos[1]) == 1 and board.mouse1_pos != coords1_clicked and it_is_turn_for_player == 1 and check_move(board, board.mouse1_pos, board.mouse2_pos) == "ok" and check_move(board, board.mouse2_pos, coords1_clicked) == "ok":
                                 verdict = move(board, board.mouse1_pos, coords1_clicked)
                                 if verdict == "ok":
-                                    it_is_turn_for_player = change_turn(it_is_turn_for_player)
+                                    it_is_turn_for_player = change_turn(it_is_turn_for_player, board)
                                     print(it_is_turn_for_player)
                             elif abs(board.mouse1_pos[0] - coords1_clicked[0]) + abs(board.mouse1_pos[1] - coords1_clicked[1]) == 1 and abs(board.mouse1_pos[0] - board.mouse2_pos[0]) + abs(board.mouse1_pos[1] - board.mouse2_pos[1]) == 1 and board.mouse2_pos != coords1_clicked and it_is_turn_for_player == 2 and check_move(board, board.mouse2_pos, board.mouse1_pos) == "ok" and check_move(board, board.mouse1_pos, coords1_clicked) == "ok":
                                 verdict = move(board, board.mouse2_pos, coords1_clicked)
                                 if verdict == "ok":
-                                    it_is_turn_for_player = change_turn(it_is_turn_for_player)
+                                    it_is_turn_for_player = change_turn(it_is_turn_for_player, board)
                                     print(it_is_turn_for_player)
+                            if verdict == "ok":
+                                check_win(board)
                             else:
                                 coords1 = None
                                 coords1_clicked = None
