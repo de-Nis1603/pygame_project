@@ -1,7 +1,6 @@
 import pygame
 import os
 import copy
-import time
 import sqlite3
 
 
@@ -260,23 +259,12 @@ def change_turn(turn, board):
 
 def check_win(board):
     if board.mouse1_pos[1] == 0:
-        give_victory(1)
+        writer(1)
+        return 1
     elif board.mouse2_pos[1] == N - 1:
-        give_victory(2)
+        writer(2)
+        return 2
 
-def give_victory(player):
-    print("winner" + str(player))
-    screen.fill((0, 0, 0))
-    f = pygame.font.Font(None, width // 13)
-    text = f.render(f'Победил игрок {player}!', True,
-                    (255, 255, 255))
-    screen.blit(text, (width * 0.25, height * 0.67))
-    king = load_image(f"king_mouse{player}.png")
-    king = pygame.transform.scale(king, (width // 3, height // 2))
-    screen.blit(king, (width // 3, 10))
-    pygame.display.flip()
-    writer(player)
-    time.sleep(10)
 
 def writer(player):
     print('writer in action')
@@ -304,21 +292,20 @@ def writer(player):
     connection.commit()
 
 
-if __name__ == '__main__':
+def main_run(s, n, w, h):
+    global turns, fence_count_1, fence_count_2, screen, width, height, N, cell_size, running
+    N = n
+    screen = s
+    width = w
+    height = h
     turns = 0
-    N = 3
     fence_count_1 = N + 1
     fence_count_2 = N + 1
     coords1 = None
+    coords1_clicked = None
     it_is_turn_for_player = 1
-
     pygame.init()
     pygame.font.init()
-    pygame.display.set_caption('Коридор')
-    infoObject = pygame.display.Info()
-    width, height = infoObject.current_w, infoObject.current_h - 10
-    print(width, height)
-    screen = pygame.display.set_mode((width, height))
     pygame.display.update()
 
     board = Board(N, N)
@@ -339,9 +326,11 @@ if __name__ == '__main__':
                 if width - 0.5 * (width - 0.9 * height) <= c2[0] <= width - 0.15 * (width - 0.9 * height) and width - 0.5 * (width - 0.9 * height) <= c1[0] <= width - 0.15 * (width - 0.9 * height) and 0.45 * height <= c1[1] <= 0.55 * height and 0.45 * height <= c2[1] <= 0.55 * height:
                     print("giving up")
                     if it_is_turn_for_player == 1:
-                        give_victory(2)
+                        running = False
+                        return 2
                     else:
-                        give_victory(1)
+                        running = False
+                        return 1
                 if coords1_clicked == coords2_clicked and coords1_clicked:
                     # скорее всего двигаем мышь,
                     # но это неточно, поэтому перепроверим
@@ -370,7 +359,9 @@ if __name__ == '__main__':
                                     it_is_turn_for_player = change_turn(it_is_turn_for_player, board)
                                     print(it_is_turn_for_player)
                             if verdict == "ok":
-                                check_win(board)
+                                winner = check_win(board)
+                                if winner:
+                                    return winner
                             else:
                                 coords1 = None
                                 coords1_clicked = None
@@ -381,7 +372,7 @@ if __name__ == '__main__':
                              coords2_clicked = None
                     else:
                         coords1 = coords1_clicked
-                elif coords1_clicked and abs(coords1_clicked[0] - coords2_clicked[0]) + abs(coords1_clicked[1] - coords2_clicked[1]) == 1:
+                elif coords1_clicked and coords2_clicked and coords1_clicked and abs(coords1_clicked[0] - coords2_clicked[0]) + abs(coords1_clicked[1] - coords2_clicked[1]) == 1:
                     # точно ставим забор
                     if it_is_turn_for_player == 1:
                         verdict = put_fence(board, coords1_clicked, coords2_clicked, fence_count_1)
@@ -394,7 +385,7 @@ if __name__ == '__main__':
                         elif it_is_turn_for_player == 2:
                             board.fence_count_2 -= 1
                             fence_count_2 -= 1
-                        it_is_turn_for_player = change_turn(it_is_turn_for_player)
+                        it_is_turn_for_player = change_turn(it_is_turn_for_player, board)
                         print(it_is_turn_for_player)
                     else:
                         coords1 = None

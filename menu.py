@@ -2,7 +2,7 @@ import pygame
 import sqlite3
 import random
 
-if __name__ == '__main__':
+def run():
     pygame.init()
     infoObject = pygame.display.Info()
     size = width, height = infoObject.current_w, infoObject.current_h - 10
@@ -48,5 +48,6 @@ if __name__ == '__main__':
                 x, y = event.pos[0], event.pos[1]
                 if 0.75 * width <= x <= 0.95 * width and 0.1 * height <= y <= 0.25 * height:
                     print('menu')
+                    return
                     # возвращаемся в меню
     pygame.quit()
